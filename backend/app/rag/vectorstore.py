@@ -10,8 +10,7 @@ ChromaDB 是一个轻量级向量数据库，专门存储和搜索"向量"（文
 
 ChromaDB数据存储在本地 chroma_data/ 目录中，随项目一起。
 """
-import os
-from typing import List, Optional
+from typing import List
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from app.core.config import settings

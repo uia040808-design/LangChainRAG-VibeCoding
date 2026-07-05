@@ -2,13 +2,12 @@
 问答接口：发送消息、获取回答（SSE流式输出）、反馈
 """
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, get_current_user
-from app.schemas.chat import ChatRequest, FeedbackRequest, MessageResponse, SourceInfo
-from app.schemas.auth import UserResponse
+from app.schemas.chat import ChatRequest, FeedbackRequest
 from app.services import chat_service
 
 router = APIRouter(prefix="/api", tags=["问答"])

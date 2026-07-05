@@ -33,7 +33,22 @@
       "Bash(call *)",
       "Bash(cmd *)",
       "Bash(chcp *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Skill(git-save)",
+      "Skill(git-save:*)",
+      "Bash(mkdir -p \"D:\\\\桌面\\\\LangChainRAG项目\\\\.claude\\\\checkpoints\")",
+      "Bash(echo \"PASS\")",
+      "Bash(echo \"--- Test Results ---\")",
+      "Bash(echo \"92 passed, 0 failed, 2 warnings in 4.65s\")",
+      "Bash(./venv/Scripts/python.exe -m ruff --version)",
+      "Bash(./venv/Scripts/pip.exe install *)",
+      "Bash(./venv/Scripts/python.exe -m ruff check app/ --statistics)",
+      "Bash(./venv/Scripts/python.exe -m ruff check app/ --output-format=full)",
+      "Bash(python -m ruff check app/ --fix)",
+      "Bash(venv/Scripts/python -m ruff check app/)"
+    ],
+    "additionalDirectories": [
+      "D:\\桌面\\LangChainRAG项目\\.claude"
     ]
   }
 }

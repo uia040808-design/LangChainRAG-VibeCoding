@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_admin_user
 from app.schemas.knowledge import (
     DocumentResponse, DocumentListResponse,
-    UploadResponse, ChunkResponse, StatsResponse,
+    UploadResponse, StatsResponse,
 )
 from app.services import knowledge_service
 

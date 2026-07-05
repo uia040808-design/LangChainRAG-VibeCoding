@@ -6,7 +6,7 @@ FastAPI的依赖注入系统：
 就通过 Depends() 声明，FastAPI自动提供。
 这样做的好处是：代码复用、便于测试、解耦。
 """
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker

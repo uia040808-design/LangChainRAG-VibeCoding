@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.deps import engine, Base
-from app.models import User, ChatSession, Message, KnowledgeDocument
+from app.models import User
 
 # 导入所有API路由
 from app.api import auth, chat, session, knowledge
@@ -99,5 +99,5 @@ async def root():
         "name": settings.app_name,
         "version": settings.app_version,
         "status": "running",
-        "docs": f"/docs",
+        "docs": "/docs",
     }

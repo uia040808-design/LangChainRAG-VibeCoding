@@ -3,8 +3,6 @@
 """
 import os
 import uuid
-import shutil
-from pathlib import Path
 from typing import List
 from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession

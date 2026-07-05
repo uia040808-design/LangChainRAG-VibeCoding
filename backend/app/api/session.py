@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_user
 from app.schemas.chat import (
     RenameSessionRequest,
-    SessionResponse, SessionListResponse, MessageResponse,
+    SessionResponse, SessionListResponse,
 )
 from app.services import session_service
 

@@ -132,11 +132,11 @@ async def save_feedback(
     message = result.scalar_one_or_none()
 
     if not message:
-        from fastapi import HTTPException, status
+        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="消息不存在")
 
     if feedback not in ("like", "dislike"):
-        from fastapi import HTTPException, status
+        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="反馈类型只能为 like 或 dislike")
 
     message.feedback = feedback

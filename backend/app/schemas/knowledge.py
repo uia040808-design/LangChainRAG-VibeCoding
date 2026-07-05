@@ -2,8 +2,8 @@
 知识库管理相关的请求/响应数据模型
 """
 from datetime import datetime
-from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Any
+from pydantic import BaseModel, field_validator
 
 
 def _coerce_datetime(v: Any) -> str:

@@ -10,11 +10,9 @@ RAG 核心链模块
   对话历史：当前会话中的历史消息（用于多轮对话理解上下文）
   用户问题：当前用户的问题
 """
-import json
 from typing import AsyncIterator, List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.documents import Document
 
 from app.core.config import settings
 from app.rag.retriever import retrieve_context
