@@ -1,0 +1,43 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+backend/venv/
+
+# ===== 环境变量（包含 API Key 等敏感信息）=====
+.env
+!.env.example
+
+# ===== 数据库文件 =====
+*.db
+*.sqlite3
+
+# ===== ChromaDB 向量数据 =====
+chroma_data/
+
+# ===== 上传文件 =====
+uploads/
+
+# ===== Node.js =====
+node_modules/
+frontend/dist/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
+
+# ===== Claude Code Checkpoints（每次提交后自动清理）=====
+.claude/checkpoints/
+
+# ===== 临时文件 =====
+*.log
+*.tmp

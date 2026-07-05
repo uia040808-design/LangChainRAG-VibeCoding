@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from app.core.config import settings; print\\('Config OK, API Key:', settings.dashscope_api_key[:20] + '...'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c ' *)",
+      "Bash(rm -f app.db)",
+      "Bash(npx tsc *)",
+      "Bash(venv/Scripts/pip install *)",
+      "Bash(pip show *)",
+      "Bash(python -X utf8 -c ' *)",
+      "Bash(python -m uvicorn _t:app --port 9876)",
+      "Bash(kill %1)",
+      "Bash(pip list *)",
+      "Bash(python -X utf8 test_http_sse.py)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //PID 22532)",
+      "Bash(taskkill //F //PID 28184)",
+      "Bash(curl -s -X POST http://localhost:8000/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"admin\\\\\",\\\\\"password\\\\\":\\\\\"123456\\\\\"}\")",
+      "Bash(python -m json.tool)",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(ls \"D:\\\\桌面\\\\晚秋记账\")",
+      "Read(//d/桌面/晚秋记账/**)",
+      "Bash(python -m pytest *)",
+      "Bash(mkdir *)",
+      "Bash(echo *)",
+      "Bash(cat *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(cd *)",
+      "Bash(venv/*)",
+      "Bash(start *)",
+      "Bash(call *)",
+      "Bash(cmd *)",
+      "Bash(chcp *)",
+      "Bash(git *)"
+    ]
+  }
+}
