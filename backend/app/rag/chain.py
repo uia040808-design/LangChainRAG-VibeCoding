@@ -10,6 +10,7 @@ RAG 核心链模块
   对话历史：当前会话中的历史消息（用于多轮对话理解上下文）
   用户问题：当前用户的问题
 """
+import asyncio
 from typing import AsyncIterator, List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -129,8 +130,8 @@ async def generate_answer(
         字典 {"type": "done", "content": "完整回答"} - 完成标记
     """
     try:
-        # 步骤1：检索相关知识库内容
-        docs_with_scores = retrieve_context(query, k=5)
+        # 步骤1：检索相关知识库内容（在线程池中执行，避免阻塞事件循环）
+        docs_with_scores = await asyncio.to_thread(retrieve_context, query, k=5)
 
         # 步骤2：提取引用来源信息（先发送给前端）
         sources = []
@@ -177,7 +178,7 @@ async def generate_answer_simple(query: str) -> str:
     参数：query - 用户问题
     返回：完整回答字符串
     """
-    docs_with_scores = retrieve_context(query, k=5)
+    docs_with_scores = await asyncio.to_thread(retrieve_context, query, k=5)
     messages = build_messages(query, docs_with_scores, [])
     llm = get_llm(streaming=False)
     response = await llm.ainvoke(messages)

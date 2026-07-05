@@ -86,7 +86,7 @@ echo.
 
 :: ===== Start backend =====
 echo [2/4] Starting backend server (http://localhost:8000)...
-start "LangChainRAG-Backend" cmd /k "cd /d %BACKEND_DIR% && venv\Scripts\activate.bat && echo Backend starting... && uvicorn app.main:app --reload --port 8000"
+start "LangChainRAG-Backend" /D "%BACKEND_DIR%" cmd /k "venv\Scripts\activate.bat && echo Backend starting... && uvicorn app.main:app --reload --port 8000"
 
 :: Wait for backend to start
 echo        Waiting for backend to start (5 seconds)...
@@ -118,7 +118,7 @@ echo.
 
 :: ===== Start frontend =====
 echo [4/4] Starting frontend server (http://localhost:5173)...
-start "LangChainRAG-Frontend" cmd /k "cd /d %FRONTEND_DIR% && echo Frontend starting... && npm run dev"
+start "LangChainRAG-Frontend" /D "%FRONTEND_DIR%" cmd /k "echo Frontend starting... && npm run dev"
 
 :: Wait for frontend to start
 echo        Waiting for frontend to start (5 seconds)...

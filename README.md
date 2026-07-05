@@ -36,6 +36,11 @@ LangChainRAG项目/
 │   │   ├── schemas/            # 请求/响应数据模型（Pydantic）
 │   │   ├── services/           # 业务逻辑层
 │   │   └── main.py             # FastAPI 应用入口
+│   ├── stress_test/            # 压力测试脚本
+│   │   ├── locustfile.py       #   核心压测脚本（模拟多用户对话）
+│   │   ├── test_data.py        #   测试数据（100 用户 + 问题池）
+│   │   ├── prepare.py          #   测试前准备（自动注册用户）
+│   │   └── sse_verify.py       #   SSE 单请求深度剖析
 │   ├── uploads/                # 上传的文档文件
 │   ├── chroma_data/            # ChromaDB 向量数据持久化目录
 │   ├── .env                    # 环境变量配置（需自行创建）
@@ -317,6 +322,67 @@ SECRET_KEY=dev-secret-key-change-in-production
 BACKEND_PORT=8000                              # 后端端口
 FRONTEND_PORT=5173                             # 前端端口
 ```
+
+---
+
+## ⚡ 性能优化
+
+针对 100 人并发场景，系统做了以下优化：
+
+### 优化清单
+
+| 文件 | 优化内容 | 通俗解释 |
+|------|----------|----------|
+| `chat_service.py` | 事务一拆为二 | 用户消息写入后立即释放数据库锁，不再等 AI 回答完才放开 |
+| `chain.py` | `asyncio.to_thread` | 检索操作扔到线程池执行，不阻塞其他用户的请求 |
+| `vectorstore.py` | 单例缓存 | ChromaDB 实例只创建一次，之后复用，减少磁盘读写 |
+| `embeddings.py` | httpx 连接复用 | Embedding API 的 TCP 连接重复使用，减少建连开销 |
+| `deps.py` | 连接池扩容 + WAL 模式 | 数据库连接数从 15 提到 50，开启 WAL 让读写并行 |
+
+### 优化前后对比（100 用户压测）
+
+| 指标 | 优化前 | 优化后 | 提升 |
+|------|:--:|:--:|------|
+| 总失败率 | 37.9% | **3.6%** | ↓ 90% |
+| 聊天失败率 | 61.3% | **9.1%** | ↓ 85% |
+| 登录失败率 | 8% | **0%** | ✅ 完全消除 |
+| 会话失败率 | 50% | **0%** | ✅ 完全消除 |
+| 首 Token 中位数 | 23000ms | **2500ms** | 快 9.2 倍 |
+| p95 响应时间 | 41000ms | **2900ms** | ↓ 93% |
+
+> **核心瓶颈分析**：SQLite 属于文件型数据库，同一时刻只允许一个写入操作，天然不适合高并发。优化通过拆分事务 + 连接池扩容 + WAL 模式，大幅减少了"数据库被锁"的等待时间。如需更高并发，可考虑将数据库换为 PostgreSQL。
+
+---
+
+## 🔬 压力测试
+
+使用 [Locust](https://locust.io/) 进行压力测试，模拟 100 个用户同时进行 3 轮对话。
+
+### 快速压测
+
+```bash
+cd backend
+venv\Scripts\activate
+
+# 1. 准备测试用户（首次运行）
+python stress_test/prepare.py
+
+# 2. 确保后端已启动后，运行压测
+python -m locust -f stress_test/locustfile.py --headless --users 100 --spawn-rate 10 --run-time 5m --html report.html
+
+# 3. 浏览器打开 report.html 查看报告
+```
+
+### Web UI 模式（演示用）
+
+```bash
+python -m locust -f stress_test/locustfile.py
+# 浏览器打开 http://localhost:8089，手动控制测试参数
+```
+
+### 测试场景
+
+每个虚拟用户执行完整的对话流程：登录 → 创建会话 → 发送问题（SSE 流式读取）→ 追问 × 3 轮，轮间随机等待 3-8 秒模拟真人思考。问题从 13 个长短不一的题目池中随机选取，避免缓存效应。
 
 ---
 

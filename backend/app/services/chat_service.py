@@ -41,11 +41,17 @@ async def chat_stream(
     """
     流式聊天：检索 + LLM生成 + 保存消息
 
-    注意：不使用 FastAPI 依赖注入的 db session，
-    因为 StreamingResponse 返回后依赖可能提前关闭 session。
-    这里自己管理数据库会话的生命周期。
+    优化：将数据库操作拆分为两次短事务
+    1. 第一次事务：验证权限 + 保存用户消息 → 立即提交（毫秒级）
+    2. RAG 流式生成（无数据库锁）→ 可能需要 5-60 秒
+    3. 第二次事务：保存 AI 回答 → 提交（毫秒级）
+
+    这样避免了流式生成期间长时间持有 SQLite 写锁，
+    从而大幅降低并发场景下的 database is locked 错误。
     """
-    # 自己创建数据库会话，不依赖 FastAPI Depends
+    chat_history = []
+
+    # ========== 第一次事务：保存用户消息（快速提交） ==========
     async with async_session_factory() as db:
         try:
             # 验证会话权限
@@ -61,7 +67,7 @@ async def chat_stream(
                 yield {"type": "error", "message": "无权访问此会话"}
                 return
 
-            # 获取聊天历史
+            # 获取聊天历史（事务内读取，确保一致性）
             chat_history = await get_chat_history(db, session_id)
 
             # 保存用户消息
@@ -71,37 +77,48 @@ async def chat_stream(
                 content=query,
             )
             db.add(user_msg)
-            await db.flush()
 
             # 如果会话标题是"新会话"，自动用第一条消息更新标题
             if session.title == "新会话":
                 session.title = query[:50] + ("..." if len(query) > 50 else "")
 
-            # RAG生成回答（流式）
-            sources_data = []
-            full_answer = ""
+            # 立即提交，释放数据库写锁
+            await db.commit()
 
-            async for chunk in generate_answer(query, chat_history):
-                if chunk["type"] == "sources":
-                    sources_data = chunk["data"]
-                    yield {"type": "sources", "data": sources_data}
-                elif chunk["type"] == "token":
-                    full_answer += chunk["content"]
-                    yield {"type": "token", "content": chunk["content"]}
-                elif chunk["type"] == "error":
-                    yield {"type": "error", "message": chunk["message"]}
-                    await db.commit()
-                    return
-                elif chunk["type"] == "done":
-                    full_answer = chunk["content"]
+        except Exception as e:
+            traceback.print_exc()
+            yield {"type": "error", "message": f"服务内部错误：{str(e)}"}
+            return
 
-            # 如果full_answer为空
-            if not full_answer:
-                yield {"type": "error", "message": "模型未返回任何内容，请检查API Key和网络连接"}
-                await db.commit()
+    # ========== RAG 流式生成（无数据库锁） ==========
+    sources_data = []
+    full_answer = ""
+
+    try:
+        async for chunk in generate_answer(query, chat_history):
+            if chunk["type"] == "sources":
+                sources_data = chunk["data"]
+                yield {"type": "sources", "data": sources_data}
+            elif chunk["type"] == "token":
+                full_answer += chunk["content"]
+                yield {"type": "token", "content": chunk["content"]}
+            elif chunk["type"] == "error":
+                yield {"type": "error", "message": chunk["message"]}
                 return
+            elif chunk["type"] == "done":
+                full_answer = chunk["content"]
+    except Exception as e:
+        traceback.print_exc()
+        yield {"type": "error", "message": f"RAG生成失败：{str(e)}"}
+        return
 
-            # 保存AI回答
+    # ========== 第二次事务：保存 AI 回答（快速提交） ==========
+    if not full_answer:
+        yield {"type": "error", "message": "模型未返回任何内容，请检查API Key和网络连接"}
+        return
+
+    async with async_session_factory() as db:
+        try:
             assistant_msg = Message(
                 session_id=session_id,
                 role="assistant",
@@ -112,12 +129,12 @@ async def chat_stream(
             await db.commit()
             await db.refresh(assistant_msg)
 
-            # 发送完成信号
+            # 发送完成信号（带 message_id）
             yield {"type": "done", "message_id": assistant_msg.id, "content": full_answer}
 
         except Exception as e:
             traceback.print_exc()
-            yield {"type": "error", "message": f"服务内部错误：{str(e)}"}
+            yield {"type": "error", "message": f"保存回答失败：{str(e)}"}
 
 
 async def save_feedback(

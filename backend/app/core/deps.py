@@ -9,6 +9,7 @@ FastAPI的依赖注入系统：
 from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -21,8 +22,22 @@ from app.core.security import decode_access_token
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    connect_args={"check_same_thread": False},  # SQLite特殊配置，允许多线程访问
+    connect_args={
+        "check_same_thread": False,  # SQLite特殊配置，允许多线程访问
+        "timeout": 30,  # 等待锁超时30秒（默认5秒），减少并发场景的 database is locked
+    },
+    pool_size=20,        # 固定连接数提升至20，匹配100人并发场景
+    max_overflow=30,     # 紧急时最多再开30个，合计最多50个连接
 )
+
+# 开启 SQLite WAL 模式（Write-Ahead Logging）
+# 通俗解释：SQLite 默认模式下，读和写互相阻塞（有人在读就不能写，有人在写就不能读）
+# 开启 WAL 后，读和写可以同时进行，大幅减少 "database is locked" 错误
+@event.listens_for(engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
+    cursor.close()
 
 # 解释：async_sessionmaker 是会话工厂，每次请求创建一个新的数据库会话
 async_session_factory = async_sessionmaker(

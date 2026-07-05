@@ -34,67 +34,71 @@ class DashScopeEmbeddings(Embeddings):
         # 构建完整的 embeddings API 地址
         self.api_url = f"{settings.dashscope_base_url}/embeddings"
         self.api_key = settings.dashscope_api_key
+        # 缓存 httpx 客户端，复用 TCP 连接（减少并发场景下的连接开销）
+        self._sync_client = None
+        self._async_client = None
+
+    def _get_sync_client(self) -> httpx.Client:
+        if self._sync_client is None or self._sync_client.is_closed:
+            self._sync_client = httpx.Client(timeout=self.timeout)
+        return self._sync_client
+
+    def _get_async_client(self) -> httpx.AsyncClient:
+        if self._async_client is None or self._async_client.is_closed:
+            self._async_client = httpx.AsyncClient(timeout=self.timeout)
+        return self._async_client
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         将多个文档文本转为向量（同步版本）
-        参数：texts - 文本列表
-        返回：向量列表，每个向量是浮点数列表
         """
+        client = self._get_sync_client()
         vectors = []
         for text in texts:
-            vector = self._call_api(text)
+            vector = self._call_api(client, text)
             vectors.append(vector)
         return vectors
 
     def embed_query(self, text: str) -> List[float]:
         """
         将单个查询文本转为向量（同步版本）
-        参数：text - 查询文本
-        返回：向量（浮点数列表）
         """
-        return self._call_api(text)
+        return self._call_api(self._get_sync_client(), text)
 
     async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         将多个文档文本转为向量（异步版本）
-        参数：texts - 文本列表
-        返回：向量列表
         """
+        client = self._get_async_client()
         vectors = []
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            for text in texts:
-                vector = await self._acall_api(client, text)
-                vectors.append(vector)
+        for text in texts:
+            vector = await self._acall_api(client, text)
+            vectors.append(vector)
         return vectors
 
     async def aembed_query(self, text: str) -> List[float]:
         """
         将单个查询文本转为向量（异步版本）
-        参数：text - 查询文本
-        返回：向量（浮点数列表）
         """
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            return await self._acall_api(client, text)
+        return await self._acall_api(self._get_async_client(), text)
 
-    def _call_api(self, text: str) -> List[float]:
-        """同步调用百炼 Embedding API"""
+    def _call_api(self, client: httpx.Client, text: str) -> List[float]:
+        """同步调用百炼 Embedding API（使用复用客户端）"""
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                response = client.post(
-                    self.api_url,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": self.model,
-                        "input": text,  # 直接传原始文本，不转 token ID
-                    },
-                )
-                response.raise_for_status()
-                data = response.json()
-                return data["data"][0]["embedding"]
+            response = client.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "input": text,  # 直接传原始文本，不转 token ID
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["data"][0]["embedding"]
         except httpx.HTTPStatusError as e:
             raise RuntimeError(
                 f"Embedding API 返回错误 (HTTP {e.response.status_code}): {e.response.text[:500]}"

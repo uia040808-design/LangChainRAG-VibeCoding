@@ -45,7 +45,10 @@
       "Bash(./venv/Scripts/python.exe -m ruff check app/ --statistics)",
       "Bash(./venv/Scripts/python.exe -m ruff check app/ --output-format=full)",
       "Bash(python -m ruff check app/ --fix)",
-      "Bash(venv/Scripts/python -m ruff check app/)"
+      "Bash(venv/Scripts/python -m ruff check app/)",
+      "Bash(./venv/Scripts/python.exe -X utf8 -c ' *)",
+      "Bash(python -m ruff --version)",
+      "Bash(ruff --version)"
     ],
     "additionalDirectories": [
       "D:\\桌面\\LangChainRAG项目\\.claude"

@@ -20,23 +20,32 @@ from app.rag.embeddings import get_embeddings_cached
 # ChromaDB集合名称（相当于关系数据库中的"表"）
 COLLECTION_NAME = "knowledge_base"
 
+# 缓存的向量存储实例，避免每次检索都重新创建（减少磁盘I/O和文件句柄消耗）
+_vectorstore_instance = None
+
 
 def get_vectorstore() -> Chroma:
     """
-    获取ChromaDB向量存储实例
+    获取ChromaDB向量存储实例（单例模式）
     返回：配置好的Chroma实例，连接到本地持久化存储
 
     注：使用 cosine（余弦相似度）作为距离函数，
         比默认的 l2（欧几里得距离）更适合文本语义搜索。
         余弦相似度关注方向而非绝对距离，对文本向量更有效。
+
+    优化：使用单例缓存，避免并发场景下每次检索都创建新实例，
+         减少磁盘 I/O 和文件句柄消耗。
     """
-    embeddings = get_embeddings_cached()
-    return Chroma(
-        collection_name=COLLECTION_NAME,
-        embedding_function=embeddings,
-        persist_directory=str(settings.chroma_dir),
-        collection_metadata={"hnsw:space": "cosine"},  # 使用余弦相似度
-    )
+    global _vectorstore_instance
+    if _vectorstore_instance is None:
+        embeddings = get_embeddings_cached()
+        _vectorstore_instance = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=embeddings,
+            persist_directory=str(settings.chroma_dir),
+            collection_metadata={"hnsw:space": "cosine"},  # 使用余弦相似度
+        )
+    return _vectorstore_instance
 
 
 def add_documents_to_store(
